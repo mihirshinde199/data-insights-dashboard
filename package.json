@@ -1,0 +1,29 @@
+{
+  "name": "data-insights-dashboard",
+  "version": "1.0.0",
+  "description": "A web-based dashboard for uploading CSV data, visualizing it, and getting AI-powered insights, predictions, and solutions.",
+  "main": "src/index.html",
+  "scripts": {
+    "start": "npx serve src",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "dashboard",
+    "data-analysis",
+    "csv",
+    "chart.js",
+    "ai",
+    "llm",
+    "insights",
+    "predictions",
+    "html",
+    "javascript",
+    "tailwind-css",
+    "machine-learning"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
