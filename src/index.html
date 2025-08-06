@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Insights Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Lighter blue-gray background */
+            color: #2d3748; /* Darker text color */
+        }
+        .container {
+            max-width: 1000px; /* Slightly narrower container for better focus */
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem; /* More rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Stronger shadow */
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0; /* Subtle border */
+        }
+        input[type="file"] {
+            display: none; /* Hide default file input */
+        }
+        .custom-file-upload {
+            border: 2px dashed #a0aec0; /* Dashed border for upload area */
+            background-color: #edf2f7; /* Light gray background */
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .custom-file-upload:hover {
+            background-color: #e2e8f0;
+            border-color: #4299e1; /* Blue on hover */
+        }
+        table {
+            width: 100%;
+            border-collapse: separate; /* Use separate for rounded cells */
+            border-spacing: 0;
+            overflow: hidden; /* Ensures rounded corners apply */
+            border-radius: 0.5rem; /* Rounded table corners */
+        }
+        th, td {
+            border: 1px solid #e2e8f0; /* Light border */
+            padding: 0.85rem 1.25rem; /* More padding */
+            text-align: left;
+        }
+        th {
+            background-color: #ebf4ff; /* Lighter blue header */
+            font-weight: 700; /* Bolder header text */
+            color: #2c5282; /* Darker blue header text */
+            text-transform: uppercase;
+            font-size: 0.875rem; /* Smaller font size for headers */
+        }
+        td {
+            background-color: #ffffff;
+            color: #4a5568; /* Slightly darker body text */
+        }
+        /* Rounded corners for first and last cells */
+        th:first-child { border-top-left-radius: 0.5rem; }
+        th:last-child { border-top-right-radius: 0.5rem; }
+        tr:last-child td:first-child { border-bottom-left-radius: 0.5rem; }
+        tr:last-child td:last-child { border-bottom-right-radius: 0.5rem; }
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-left-color: #ffffff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button-primary {
+            background-color: #4299e1; /* Blue */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-primary:hover {
+            background-color: #3182ce; /* Darker blue */
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .button-secondary {
+            background-color: #48bb78; /* Green */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-secondary:hover {
+            background-color: #38a169; /* Darker green */
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            color: #2d3748;
+            transition: all 0.2s ease-in-out;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+        .llm-response-box {
+            background-color: #f7fafc; /* Very light gray */
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            color: #2d3748;
+            white-space: pre-wrap;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); /* Inner shadow */
+        }
+        .chart-container {
+            position: relative;
+            height: 300px; /* Fixed height for charts */
+            width: 100%;
+            margin-bottom: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .analyzing-icon {
+            display: none; /* Hidden by default */
+            margin-left: 0.75rem;
+            animation: bounce 1s infinite; /* Simple bounce animation */
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8">
+    <div class="container">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-8">📊 Data Insights Dashboard</h1>
+
+        <!-- Data Input Section -->
+        <div class="card">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">1. Upload Your Data (CSV File)</h2>
+            <p class="text-gray-600 mb-4">Select a CSV file from your computer. The first row should contain your headers.</p>
+
+            <label for="csvFileInput" class="custom-file-upload flex flex-col items-center justify-center">
+                <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <span id="fileNameDisplay" class="text-lg font-semibold text-gray-700">Drag & Drop or Click to Upload CSV</span>
+                <span class="text-sm text-gray-500 mt-1">Max file size: 5MB</span>
+            </label>
+            <input type="file" id="csvFileInput" accept=".csv" />
+
+            <button id="processCsvBtn" class="mt-6 w-full button-primary flex items-center justify-center">
+                Process Data
+            </button>
+        </div>
+
+        <!-- Processed Data Display Section -->
+        <div class="card" id="dataDisplayCard" style="display:none;">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">2. Processed Data & Visualizations</h2>
+            <div id="dataTableContainer" class="overflow-x-auto mb-6">
+                <!-- Data table will be rendered here -->
+            </div>
+
+            <div id="chartsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Charts will be rendered here -->
+            </div>
+
+            <p class="text-gray-600 mt-6 text-sm">
+                <strong class="font-semibold text-gray-700">Automatic Visualizations:</strong> The dashboard attempts to generate relevant charts based on your data. Common visualizations include **bar graphs** for comparing categorical data (e.g., sales by product), and **line graphs** for showing trends over time (e.g., daily revenue).
+            </p>
+        </div>
+
+        <!-- LLM Insights Section -->
+        <div class="card" id="llmInsightsCard" style="display:none;">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">3. Get Insights, Predictions & Solutions</h2>
+            <p class="text-gray-600 mb-4">Select a machine learning model to guide the analysis and enter your query for insights.</p>
+
+            <div class="mb-4">
+                <label for="mlModelSelect" class="block text-sm font-medium text-gray-700 mb-2">Select Prediction Model:</label>
+                <select id="mlModelSelect" class="input-field">
+                    <option value="General Analysis">General Analysis (Default)</option>
+                    <option value="Linear Regression">Linear Regression (for trends)</option>
+                    <option value="K-Nearest Neighbors (KNN)">K-Nearest Neighbors (KNN)</option>
+                    <option value="Decision Tree">Decision Tree</option>
+                    <option value="Clustering (K-Means)">Clustering (K-Means)</option>
+                </select>
+            </div>
+
+            <input type="text" id="llmPromptInput" class="input-field" placeholder="e.g., What are the key trends in sales? Provide future predictions and solutions for potential issues.">
+            <button id="getInsightsBtn" class="mt-4 w-full button-secondary flex items-center justify-center">
+                Get Insights
+                <div id="loadingSpinner" class="loading-spinner ml-3"></div>
+                <!-- New analyzing icon -->
+                <svg id="analyzingIcon" class="analyzing-icon w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c-4.639 0-8 2.083-8 5h16c0-2.917-3.361-5-8-5zm0 0c-1.333 0-2.5-1-2.5-2.5S7.667 14 9 14s2.5 1 2.5 2.5S10.333 19 9 19z"></path>
+                </svg>
+            </button>
+            <div id="llmResponse" class="llm-response-box">
+                <!-- LLM response will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Global variables for Chart.js instances
+        let myCharts = {};
+
+        // Function to parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            if (lines.length === 0) return { headers: [], data: [] };
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length === headers.length) {
+                    let row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    data.push(row);
+                }
+            }
+            return { headers, data };
+        }
+
+        // Function to render data table (now showing only first 5 rows)
+        function renderDataTable(headers, data) {
+            const tableContainer = document.getElementById('dataTableContainer');
+            if (!tableContainer) return;
+
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No data to display. Please upload a valid CSV file.</p>';
+                return;
+            }
+
+            let tableHTML = '<table class="min-w-full">';
+            tableHTML += '<thead><tr>';
+            headers.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            tableHTML += '</tr></thead>';
+            tableHTML += '<tbody>';
+            // Limit to first 5 rows
+            for (let i = 0; i < Math.min(data.length, 5); i++) {
+                const row = data[i];
+                tableHTML += '<tr>';
+                headers.forEach(header => {
+                    // Truncate long cell content for better table readability
+                    const cellContent = String(row[header]).length > 50 ? String(row[header]).substring(0, 47) + '...' : String(row[header]);
+                    tableHTML += `<td>${cellContent}</td>`;
+                });
+                tableHTML += '</tr>';
+            }
+            tableHTML += '</tbody></table>';
+            if (data.length > 5) {
+                tableHTML += `<p class="text-gray-500 text-center text-sm mt-2">Showing first 5 of ${data.length} rows.</p>`;
+            }
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        // Function to destroy existing charts
+        function destroyCharts() {
+            for (const chartId in myCharts) {
+                if (myCharts[chartId]) {
+                    myCharts[chartId].destroy();
+                }
+            }
+            myCharts = {}; // Clear the object
+            document.getElementById('chartsContainer').innerHTML = ''; // Clear chart containers
+        }
+
+        // Function to generate charts (now includes more types)
+        function generateCharts(headers, data) {
+            destroyCharts(); // Clear previous charts
+
+            const chartsContainer = document.getElementById('chartsContainer');
+            if (!chartsContainer) return;
+
+            if (data.length === 0) {
+                chartsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No data available to generate charts.</p>';
+                return;
+            }
+
+            let dateColumn = null;
+            let numericalColumns = [];
+            let categoricalColumns = [];
+
+            headers.forEach(header => {
+                const firstValue = data[0][header];
+                if (!isNaN(parseFloat(firstValue)) && isFinite(firstValue)) {
+                    numericalColumns.push(header);
+                } else if (!isNaN(new Date(firstValue))) { // Basic date detection
+                    dateColumn = header;
+                } else {
+                    categoricalColumns.push(header);
+                }
+            });
+
+            const chartColors = [
+                '#4299e1', '#48bb78', '#f6ad55', '#ed64a6', '#9f7aea',
+                '#ecc94b', '#38b2ac', '#fc8181', '#63b3ed', '#a0aec0'
+            ];
+
+            let chartsGeneratedCount = 0;
+
+            // 1. Line Chart (Time Series)
+            if (dateColumn && numericalColumns.length > 0) {
+                const numericalColumn = numericalColumns[0];
+                const labels = data.map(row => row[dateColumn]);
+                const values = data.map(row => parseFloat(row[numericalColumn]));
+
+                const canvasId = 'lineChartCanvas';
+                chartsContainer.innerHTML += `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                const ctx = document.getElementById(canvasId).getContext('2d');
+
+                myCharts[canvasId] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${numericalColumn} over ${dateColumn}`,
+                            data: values,
+                            borderColor: chartColors[0],
+                            backgroundColor: `${chartColors[0]}33`, // 20% opacity
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${numericalColumn} Trend`,
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: dateColumn
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: numericalColumn
+                                }
+                            }
+                        }
+                    }
+                });
+                chartsGeneratedCount++;
+            }
+
+            // 2. Bar Chart (Categorical vs. Numerical)
+            if (categoricalColumns.length > 0 && numericalColumns.length > 0) {
+                const categoricalColumn = categoricalColumns[0];
+                const numericalColumn = numericalColumns[0];
+
+                const aggregatedData = data.reduce((acc, row) => {
+                    const category = row[categoricalColumn];
+                    const value = parseFloat(row[numericalColumn]);
+                    if (!isNaN(value)) {
+                        acc[category] = (acc[category] || 0) + value;
+                    }
+                    return acc;
+                }, {});
+
+                const labels = Object.keys(aggregatedData);
+                const values = Object.values(aggregatedData);
+
+                const canvasId = 'barChartCanvas';
+                chartsContainer.innerHTML += `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                const ctx = document.getElementById(canvasId).getContext('2d');
+
+                myCharts[canvasId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `Total ${numericalColumn} by ${categoricalColumn}`,
+                            data: values,
+                            backgroundColor: chartColors[1],
+                            borderColor: chartColors[1],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Total ${numericalColumn} by ${categoricalColumn}`,
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: categoricalColumn
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: `Total ${numericalColumn}`
+                                }
+                            }
+                        }
+                    }
+                });
+                chartsGeneratedCount++;
+            }
+
+            // 3. Pie Chart (Proportions of a Categorical Column)
+            // This chart works best if there's a categorical column and a numerical column to represent proportions.
+            // For simplicity, we'll try to use the first categorical column and count occurrences or sum a numerical column.
+            if (categoricalColumns.length > 0 && numericalColumns.length > 0) {
+                const categoricalColumn = categoricalColumns[0];
+                const numericalColumn = numericalColumns[0]; // Use first numerical column for sum
+
+                const aggregatedData = data.reduce((acc, row) => {
+                    const category = row[categoricalColumn];
+                    const value = parseFloat(row[numericalColumn]);
+                    if (!isNaN(value)) {
+                        acc[category] = (acc[category] || 0) + value;
+                    }
+                    return acc;
+                }, {});
+
+                const labels = Object.keys(aggregatedData);
+                const values = Object.values(aggregatedData);
+
+                if (labels.length > 1) { // Only generate if there's more than one category
+                    const canvasId = 'pieChartCanvas';
+                    chartsContainer.innerHTML += `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+
+                    myCharts[canvasId] = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: `Distribution of ${numericalColumn} by ${categoricalColumn}`,
+                                data: values,
+                                backgroundColor: chartColors.slice(0, labels.length).map((color, index) => `${color}CC`), // Slightly transparent
+                                borderColor: '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `Distribution of ${numericalColumn} by ${categoricalColumn}`,
+                                    font: { size: 16, weight: 'bold' }
+                                },
+                                legend: {
+                                    position: 'right',
+                                }
+                            }
+                        }
+                    });
+                    chartsGeneratedCount++;
+                }
+            }
+
+            // 4. Scatter Plot (Relationship between two Numerical Columns)
+            if (numericalColumns.length >= 2) {
+                const numCol1 = numericalColumns[0];
+                const numCol2 = numericalColumns[1];
+
+                const scatterData = data.map(row => ({
+                    x: parseFloat(row[numCol1]),
+                    y: parseFloat(row[numCol2])
+                })).filter(point => !isNaN(point.x) && !isNaN(point.y)); // Filter out invalid points
+
+                if (scatterData.length > 0) {
+                    const canvasId = 'scatterChartCanvas';
+                    chartsContainer.innerHTML += `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+
+                    myCharts[canvasId] = new Chart(ctx, {
+                        type: 'scatter',
+                        data: {
+                            datasets: [{
+                                label: `${numCol2} vs. ${numCol1}`,
+                                data: scatterData,
+                                backgroundColor: chartColors[2],
+                                borderColor: chartColors[2],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `Relationship between ${numCol1} and ${numCol2}`,
+                                    font: { size: 16, weight: 'bold' }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    position: 'bottom',
+                                    title: {
+                                        display: true,
+                                        text: numCol1
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: numCol2
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    chartsGeneratedCount++;
+                }
+            }
+
+
+            if (chartsGeneratedCount === 0) {
+                chartsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Could not identify suitable data for automatic chart generation. Please ensure your CSV has numerical, categorical, and/or date columns.</p>';
+            }
+        }
+
+        // --- File Upload Logic ---
+        const csvFileInput = document.getElementById('csvFileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        let uploadedFileContent = null;
+
+        csvFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedFileContent = e.target.result;
+                };
+                reader.onerror = (e) => {
+                    fileNameDisplay.textContent = 'Error reading file.';
+                    uploadedFileContent = null;
+                    console.error('File reading error:', e);
+                };
+                reader.readAsText(file);
+            } else {
+                fileNameDisplay.textContent = 'Drag & Drop or Click to Upload CSV';
+                uploadedFileContent = null;
+            }
+        });
+
+        // Event listener for Process Data button
+        document.getElementById('processCsvBtn').addEventListener('click', () => {
+            if (uploadedFileContent) {
+                const { headers, data } = parseCSV(uploadedFileContent);
+
+                if (data.length > 0) {
+                    renderDataTable(headers, data);
+                    generateCharts(headers, data); // Generate charts after processing
+                    document.getElementById('dataDisplayCard').style.display = 'block';
+                    document.getElementById('llmInsightsCard').style.display = 'block';
+                    window.parsedData = data; // Store parsed data for LLM
+                    document.getElementById('llmResponse').innerText = 'Data processed successfully! Charts generated. Now ask for insights.';
+                } else {
+                    document.getElementById('dataDisplayCard').style.display = 'none';
+                    document.getElementById('llmInsightsCard').style.display = 'none';
+                    document.getElementById('llmResponse').innerText = 'Error: No valid data found in the CSV file. Please check its format.';
+                    window.parsedData = null;
+                    destroyCharts(); // Clear any existing charts
+                }
+            } else {
+                document.getElementById('llmResponse').innerText = 'Please upload a CSV file first.';
+                document.getElementById('dataDisplayCard').style.display = 'none';
+                document.getElementById('llmInsightsCard').style.display = 'none';
+                destroyCharts(); // Clear any existing charts
+            }
+        });
+
+        // Function to call LLM API
+        async function callLLM(prompt, data, modelType) {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const analyzingIcon = document.getElementById('analyzingIcon');
+            const getInsightsBtn = document.getElementById('getInsightsBtn');
+            const llmResponseDiv = document.getElementById('llmResponse');
+
+            loadingSpinner.style.display = 'block';
+            analyzingIcon.style.display = 'block';
+            getInsightsBtn.disabled = true;
+            getInsightsBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            llmResponseDiv.innerText = `Generating insights using ${modelType} perspective... This might take a moment.`;
+
+            // Construct the full prompt including the data and model type
+            const fullPrompt = `Analyze the following CSV data from the perspective of a ${modelType} model to identify key trends, patterns, and anomalies. Based on this analysis, provide future predictions and actionable solutions to address potential issues or capitalize on opportunities. The data is:\n\n${JSON.stringify(data, null, 2)}\n\nUser's specific request: ${prompt}`;
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: fullPrompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; // Canvas will automatically provide this at runtime
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            // Exponential backoff for API calls
+            const maxRetries = 5;
+            let currentRetry = 0;
+            let response;
+
+            while (currentRetry < maxRetries) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) { // Too Many Requests
+                        const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
+                        currentRetry++;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue; // Retry the request
+                    } else if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        llmResponseDiv.innerText = text;
+                    } else {
+                        llmResponseDiv.innerText = 'Error: No valid response from LLM. Please try again or refine your prompt.';
+                    }
+                    break; // Success, exit retry loop
+                } catch (error) {
+                    llmResponseDiv.innerText = `Error: Failed to fetch insights. Please check your internet connection or try again later. (${error.message})`;
+                    break; // Exit retry loop on other errors
+                } finally {
+                    loadingSpinner.style.display = 'none';
+                    analyzingIcon.style.display = 'none';
+                    getInsightsBtn.disabled = false;
+                    getInsightsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        // Event listener for Get Insights button
+        document.getElementById('getInsightsBtn').addEventListener('click', () => {
+            const llmPrompt = document.getElementById('llmPromptInput').value;
+            const selectedModel = document.getElementById('mlModelSelect').value; // Get selected model
+            const data = window.parsedData;
+
+            if (!data || data.length === 0) {
+                document.getElementById('llmResponse').innerText = 'Please process some data from an uploaded CSV file first.';
+                return;
+            }
+            if (!llmPrompt.trim()) {
+                document.getElementById('llmResponse').innerText = 'Please enter a prompt for insights (e.g., "Analyze sales trends").';
+                return;
+            }
+
+            callLLM(llmPrompt, data, selectedModel); // Pass selected model to LLM function
+        });
+
+    </script>
+</body>
+</html>
